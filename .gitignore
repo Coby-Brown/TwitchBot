@@ -1,0 +1,13 @@
+ConfigFiles/tokens.py
+
+# Python environment and build artifacts
+.venv/
+__pycache__/
+*.py[cod]
+
+# Runtime chat output and cached member lookups
+Chat/FilteredChat/*.txt
+Chat/FilteredChat/*.html
+Chat/UnfilteredChat/*.txt
+Chat/UnfilteredChat/*.html
+Chat/ChatMembers/chat_lookup_cache.json

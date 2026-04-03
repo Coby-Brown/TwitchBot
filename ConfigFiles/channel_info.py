@@ -1,0 +1,2 @@
+CHANNEL = 'your_channel_name'  # Change to your desired channel to be watched (Example: cobydoesstuff)
+USER_ID = 'your_user_id'  # Change to the user ID of the channel (Example: 497113157, You can get this from https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/)
