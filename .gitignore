@@ -1,4 +1,5 @@
 ConfigFiles/tokens.py
+ConfigFiles/channel_info.py
 
 # Python environment and build artifacts
 .venv/
