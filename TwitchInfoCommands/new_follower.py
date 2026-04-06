@@ -16,6 +16,7 @@ from TwitchInfoCommands.obs_helpers import (
     DEFAULT_SCENE_NAME,
     DEFAULT_VISIBLE_SECONDS,
     launch_obs_alert,
+    write_text_file,
 )
 
 
@@ -25,7 +26,8 @@ SOURCE_VISIBLE_SECONDS = DEFAULT_VISIBLE_SECONDS
 FOLLOWER_POLL_INTERVAL = 15
 FOLLOWER_FETCH_LIMIT = 25
 HTTP_TIMEOUT_SECONDS = 10
-FOLLOWER_CACHE_PATH = os.path.join(os.path.dirname(__file__), 'follower_cache.json')
+FOLLOWER_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ExtraFiles', 'Cache')
+FOLLOWER_CACHE_PATH = os.path.join(FOLLOWER_CACHE_DIR, 'follower_cache.json')
 _STATE_LOCK = threading.Lock()
 
 
@@ -42,6 +44,7 @@ def _safe_json_load(path: str) -> dict:
 
 
 def _safe_json_save(path: str, data: dict) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp_path = f"{path}.tmp"
     with open(tmp_path, 'w', encoding='utf-8') as file_handle:
         json.dump(data, file_handle, indent=2, sort_keys=True)
@@ -107,6 +110,7 @@ def handle_new_follower(username: str | None = None) -> bool:
     """Trigger the follower OBS source for a newly detected follower."""
     follower_name = username.strip() if username else 'a new follower'
     print(f"[Info] Follower detected: {follower_name}")
+    write_text_file('latest_follower.txt', follower_name)
     launch_obs_alert('follower', OBS_SCENE_NAME, OBS_SOURCE_NAME, SOURCE_VISIBLE_SECONDS)
     return True
 
@@ -131,6 +135,7 @@ def poll_for_new_followers(poll_interval: float = FOLLOWER_POLL_INTERVAL) -> Non
                     with _STATE_LOCK:
                         _safe_json_save(FOLLOWER_CACHE_PATH, {'last_seen_user_id': newest_user_id})
                 follower_name = newest_follower.get('user_name') or newest_follower.get('user_login') or 'unknown'
+                write_text_file('latest_follower.txt', follower_name)
                 print(f"[Info] Follower watcher primed at {follower_name}")
             else:
                 new_followers = []

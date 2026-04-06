@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import threading
 import time
 
@@ -10,6 +11,16 @@ from connect_obs import connect as connect_obs
 
 DEFAULT_SCENE_NAME = "Streaming"
 DEFAULT_VISIBLE_SECONDS = 5
+ROOT_DIR = Path(__file__).resolve().parents[1]
+TEXT_FILES_DIR = ROOT_DIR / "ExtraFiles" / "TextBasedFiles"
+
+
+def write_text_file(filename: str, contents: str) -> None:
+    """Write plain-text status data for stream overlays."""
+    TEXT_FILES_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = TEXT_FILES_DIR / filename
+    normalized_contents = contents.rstrip() if contents else ''
+    file_path.write_text(f"{normalized_contents}\n", encoding='utf-8')
 
 
 def parse_irc_tags(line: str) -> dict[str, str]:

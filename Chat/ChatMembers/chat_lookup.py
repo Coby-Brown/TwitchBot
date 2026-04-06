@@ -11,7 +11,8 @@ from ConfigFiles import channel_info
 from ConfigFiles import tokens
 
 
-CACHE_FILE_PATH = os.path.join(os.path.dirname(__file__), 'chat_lookup_cache.json')
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'ExtraFiles', 'Cache')
+CACHE_FILE_PATH = os.path.join(CACHE_DIR, 'chat_lookup_cache.json')
 FOLLOWER_LOOKUP_TTL_SECONDS = 6 * 60 * 60
 _CACHE_LOCK = threading.Lock()
 
@@ -44,6 +45,7 @@ def _safe_json_load(path: str):
 
 
 def _safe_json_save(path: str, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp_path = f"{path}.tmp"
     with open(tmp_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, sort_keys=True)

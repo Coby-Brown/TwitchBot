@@ -6,12 +6,13 @@ from TwitchInfoCommands.obs_helpers import (
     extract_username,
     launch_obs_alert,
     parse_irc_tags,
+    write_text_file,
 )
 
 
 OBS_SCENE_NAME = DEFAULT_SCENE_NAME
-OBS_SOURCE_NAME = "Raid Alert"
-SOURCE_VISIBLE_SECONDS = DEFAULT_VISIBLE_SECONDS
+OBS_SOURCE_NAME = "Raid"
+SOURCE_VISIBLE_SECONDS = 10
 
 
 def handle_raid(line: str) -> bool:
@@ -25,6 +26,8 @@ def handle_raid(line: str) -> bool:
 
     username = extract_username(line, tags)
     viewer_count = tags.get('msg-param-viewerCount', 'unknown')
+    viewer_label = 'viewer' if str(viewer_count) == '1' else 'viewers'
     print(f"[Info] Raid detected from {username} with {viewer_count} viewer(s)")
+    write_text_file('raid_info.txt', f"{username} ({viewer_count} {viewer_label})")
     launch_obs_alert('raid', OBS_SCENE_NAME, OBS_SOURCE_NAME, SOURCE_VISIBLE_SECONDS)
     return True

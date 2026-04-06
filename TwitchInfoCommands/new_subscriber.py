@@ -6,6 +6,7 @@ from TwitchInfoCommands.obs_helpers import (
     extract_username,
     launch_obs_alert,
     parse_irc_tags,
+    write_text_file,
 )
 
 
@@ -37,6 +38,12 @@ def handle_new_subscriber(line: str) -> bool:
 
     username = extract_username(line, tags)
     months = tags.get('msg-param-cumulative-months') or '1'
+    latest_subscriber_name = (
+        tags.get('msg-param-recipient-display-name')
+        or tags.get('msg-param-recipient-user-name')
+        or username
+    )
     print(f"[Info] Subscription event '{msg_id}' from {username} (months: {months})")
+    write_text_file('latest_subscriber.txt', latest_subscriber_name)
     launch_obs_alert('subscriber', OBS_SCENE_NAME, OBS_SOURCE_NAME, SOURCE_VISIBLE_SECONDS)
     return True

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from Chat.ChatFilters import filter
 from Chat.ChatMembers import chat_members
 from Chat.ChatMembers import chat_lookup
@@ -5,11 +7,22 @@ import socket
 import time
 
 
-UNFILTERED_TXT_PATH = 'Chat/UnfilteredChat/chat.txt'
-UNFILTERED_HTML_PATH = 'Chat/UnfilteredChat/chat.html'
-FILTERED_TXT_PATH = 'Chat/FilteredChat/chat.txt'
-FILTERED_HTML_PATH = 'Chat/FilteredChat/chat.html'
+UNFILTERED_TXT_PATH = 'ExtraFiles/TextBasedFiles/Chats/UnfilteredChat/chat.txt'
+UNFILTERED_HTML_PATH = 'ExtraFiles/TextBasedFiles/Chats/UnfilteredChat/chat.html'
+FILTERED_TXT_PATH = 'ExtraFiles/TextBasedFiles/Chats/FilteredChat/chat.txt'
+FILTERED_HTML_PATH = 'ExtraFiles/TextBasedFiles/Chats/FilteredChat/chat.html'
+OUTPUT_PATHS = (
+    UNFILTERED_TXT_PATH,
+    UNFILTERED_HTML_PATH,
+    FILTERED_TXT_PATH,
+    FILTERED_HTML_PATH,
+)
 HTML_RETENTION_SECONDS = 30
+
+
+def _ensure_output_directories():
+    for path in OUTPUT_PATHS:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
 
 
 def _render_recent_html(html_file, html_window, now_epoch):
@@ -105,6 +118,7 @@ def write_messages(sock, reward_handler=None):
     unfiltered_html_window = []
     filtered_html_window = []
     sock.settimeout(1.0)
+    _ensure_output_directories()
 
     with open(UNFILTERED_TXT_PATH, 'a', encoding='utf-8') as unfiltered_txt, \
          open(UNFILTERED_HTML_PATH, 'w+', encoding='utf-8') as unfiltered_html, \
