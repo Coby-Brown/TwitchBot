@@ -101,7 +101,7 @@ def _write_message(
         _render_recent_html(filtered_html, filtered_html_window, now_epoch)
 
 
-def write_messages(sock):
+def write_messages(sock, reward_handler=None):
     unfiltered_html_window = []
     filtered_html_window = []
     sock.settimeout(1.0)
@@ -121,6 +121,12 @@ def write_messages(sock):
                 if line.startswith('PING'):
                     sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
                     continue
+
+                if reward_handler is not None:
+                    try:
+                        reward_handler(line)
+                    except Exception as exc:
+                        print(f"[Reward] Handler error: {exc}")
 
                 message = _extract_message(line)
                 if message:
