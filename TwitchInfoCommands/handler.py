@@ -6,7 +6,7 @@ from TwitchInfoCommands.raid import handle_raid
 
 
 INFO_HANDLERS = (
-    # handle_cheer,
+    handle_cheer,
     handle_new_subscriber,
     handle_raid,
 )

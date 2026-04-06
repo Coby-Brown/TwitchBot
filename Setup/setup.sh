@@ -3,7 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="$SCRIPT_DIR/.venv"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VENV_DIR="$REPO_ROOT/.venv"
 REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 
 find_python() {
