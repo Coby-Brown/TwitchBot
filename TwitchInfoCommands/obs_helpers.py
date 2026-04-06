@@ -8,8 +8,8 @@ import time
 from connect_obs import connect as connect_obs
 
 
-DEFAULT_SCENE_NAME = "Alerts"
-DEFAULT_VISIBLE_SECONDS = 3
+DEFAULT_SCENE_NAME = "Streaming"
+DEFAULT_VISIBLE_SECONDS = 5
 
 
 def parse_irc_tags(line: str) -> dict[str, str]:
