@@ -151,7 +151,6 @@ def trigger_obs_source(
         if client is not None and item_id is not None and source_enabled and resolved_scene_name:
             try:
                 client.set_scene_item_enabled(resolved_scene_name, item_id, False)
-                print(f"[Info] Disabled OBS source '{source_name}'")
             except Exception as exc:
                 print(f"[Info] Could not disable OBS source '{source_name}': {exc}")
 
