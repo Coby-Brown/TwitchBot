@@ -9,3 +9,5 @@ __pycache__/
 # Runtime chat output and cached member lookups
 ExtraFiles/TextBasedFiles/*
 ExtraFiles/Cache/*
+ChannelPointRedeems/*
+ExtraFiles/SoundBasedFiles/*

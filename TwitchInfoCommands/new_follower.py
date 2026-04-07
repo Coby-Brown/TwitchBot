@@ -68,6 +68,55 @@ def _get_api_auth() -> tuple[str, str]:
     return _oauth_bearer(fallback_token), moderator_id
 
 
+def _follower_name(follower: dict) -> str:
+    return follower.get('user_name') or follower.get('user_login') or 'a new follower'
+
+
+def _follower_signature(follower: dict) -> str:
+    user_id = str(follower.get('user_id') or '').strip()
+    followed_at = str(follower.get('followed_at') or '').strip()
+
+    if user_id and followed_at:
+        return f"{user_id}:{followed_at}"
+    return user_id or followed_at
+
+
+def _state_from_follower(follower: dict) -> dict[str, str]:
+    state: dict[str, str] = {}
+    user_id = str(follower.get('user_id') or '').strip()
+    followed_at = str(follower.get('followed_at') or '').strip()
+    signature = _follower_signature(follower)
+
+    if user_id:
+        state['last_seen_user_id'] = user_id
+    if followed_at:
+        state['last_seen_followed_at'] = followed_at
+    if signature:
+        state['last_seen_follow_signature'] = signature
+
+    return state
+
+
+def _load_last_seen_signature(state: dict) -> str:
+    signature = str(state.get('last_seen_follow_signature') or '').strip()
+    if signature:
+        return signature
+
+    user_id = str(state.get('last_seen_user_id') or '').strip()
+    followed_at = str(state.get('last_seen_followed_at') or '').strip()
+    if user_id and followed_at:
+        return f"{user_id}:{followed_at}"
+    return ''
+
+
+def _save_last_seen_follower(follower: dict) -> str:
+    state = _state_from_follower(follower)
+    if state:
+        with _STATE_LOCK:
+            _safe_json_save(FOLLOWER_CACHE_PATH, state)
+    return state.get('last_seen_follow_signature', '')
+
+
 def _fetch_recent_followers(limit: int = FOLLOWER_FETCH_LIMIT) -> list[dict]:
     bearer, moderator_id = _get_api_auth()
     if not bearer:
@@ -121,38 +170,38 @@ def poll_for_new_followers(poll_interval: float = FOLLOWER_POLL_INTERVAL) -> Non
 
     with _STATE_LOCK:
         state = _safe_json_load(FOLLOWER_CACHE_PATH)
-        last_seen_user_id = state.get('last_seen_user_id')
+
+    last_seen_signature = _load_last_seen_signature(state)
+    legacy_last_seen_user_id = str(state.get('last_seen_user_id') or '').strip()
 
     while True:
         followers = _fetch_recent_followers(FOLLOWER_FETCH_LIMIT)
         if followers:
             newest_follower = followers[0]
-            newest_user_id = newest_follower.get('user_id')
 
-            if not last_seen_user_id:
-                last_seen_user_id = newest_user_id
-                if newest_user_id:
-                    with _STATE_LOCK:
-                        _safe_json_save(FOLLOWER_CACHE_PATH, {'last_seen_user_id': newest_user_id})
-                follower_name = newest_follower.get('user_name') or newest_follower.get('user_login') or 'unknown'
+            if not last_seen_signature and legacy_last_seen_user_id:
+                for follower in followers:
+                    if str(follower.get('user_id') or '').strip() == legacy_last_seen_user_id:
+                        last_seen_signature = _save_last_seen_follower(follower)
+                        break
+
+            if not last_seen_signature:
+                last_seen_signature = _save_last_seen_follower(newest_follower)
+                follower_name = _follower_name(newest_follower)
                 write_text_file('latest_follower.txt', follower_name)
                 print(f"[Info] Follower watcher primed at {follower_name}")
             else:
                 new_followers = []
                 for follower in followers:
-                    if follower.get('user_id') == last_seen_user_id:
+                    if _follower_signature(follower) == last_seen_signature:
                         break
                     new_followers.append(follower)
 
                 if new_followers:
                     for follower in reversed(new_followers):
-                        follower_name = follower.get('user_name') or follower.get('user_login') or 'a new follower'
-                        handle_new_follower(follower_name)
+                        handle_new_follower(_follower_name(follower))
 
-                    if newest_user_id:
-                        last_seen_user_id = newest_user_id
-                        with _STATE_LOCK:
-                            _safe_json_save(FOLLOWER_CACHE_PATH, {'last_seen_user_id': newest_user_id})
+                    last_seen_signature = _save_last_seen_follower(newest_follower)
 
         time.sleep(poll_interval)
 

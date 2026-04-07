@@ -108,10 +108,10 @@ By default, the bot expects these OBS items to exist:
 | Feature | Scene | Source |
 |---|---|---|
 | Chat browser refresh | n/a | `Chat` |
-| Follower alert | `Streaming` | `Follower` |
-| Subscriber alert | `Streaming` | `Subscriber Alert` |
-| Raid alert | `Streaming` | `Raid` |
-| Cheer alert | `Streaming` | `Cheer Alert` |
+| Follower alert | `Live` | `Follower` |
+| Subscriber alert | `Live` | `Subscriber Alert` |
+| Raid alert | `Live` | `Raid` |
+| Cheer alert | `Live` | `Cheer Alert` |
 | Example channel point reward | `Alerts` | `Channel Point Alert` |
 
 If your scene/source names differ, update the constants in:

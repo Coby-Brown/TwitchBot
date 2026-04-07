@@ -9,7 +9,7 @@ import time
 from connect_obs import connect as connect_obs
 
 
-DEFAULT_SCENE_NAME = "Streaming"
+DEFAULT_SCENE_NAME = "Live"
 DEFAULT_VISIBLE_SECONDS = 5
 ROOT_DIR = Path(__file__).resolve().parents[1]
 TEXT_FILES_DIR = ROOT_DIR / "ExtraFiles" / "TextBasedFiles"
@@ -55,6 +55,62 @@ def extract_username(line: str, tags: dict[str, str] | None = None) -> str:
     return 'unknown'
 
 
+def _list_scene_names(client) -> list[str]:
+    """Return all available OBS scene names."""
+    try:
+        scenes = client.get_scene_list().scenes
+    except Exception:
+        return []
+
+    names: list[str] = []
+    for scene in scenes:
+        scene_name = scene.get('sceneName')
+        if scene_name:
+            names.append(scene_name)
+    return names
+
+
+def _resolve_scene_item(client, scene_name: str, source_name: str) -> tuple[str | None, int | None]:
+    """Find the scene item id, falling back to the active/available scenes if needed."""
+    if not source_name:
+        return None, None
+
+    available_scenes = _list_scene_names(client)
+    candidate_scenes: list[str] = []
+
+    if scene_name and scene_name in available_scenes:
+        candidate_scenes.append(scene_name)
+
+    try:
+        current_scene_name = client.get_current_program_scene().current_program_scene_name
+        if (
+            current_scene_name
+            and current_scene_name in available_scenes
+            and current_scene_name not in candidate_scenes
+        ):
+            candidate_scenes.append(current_scene_name)
+    except Exception:
+        pass
+
+    for available_scene in available_scenes:
+        if available_scene not in candidate_scenes:
+            candidate_scenes.append(available_scene)
+
+    for candidate_scene in candidate_scenes:
+        try:
+            scene_items = client.get_scene_item_list(candidate_scene).scene_items
+        except Exception:
+            continue
+
+        for scene_item in scene_items:
+            if scene_item.get('sourceName') == source_name:
+                scene_item_id = scene_item.get('sceneItemId')
+                if scene_item_id is not None:
+                    return candidate_scene, scene_item_id
+
+    return None, None
+
+
 def trigger_obs_source(
     scene_name: str,
     source_name: str,
@@ -63,23 +119,38 @@ def trigger_obs_source(
     """Enable an OBS source briefly, then hide it again."""
     client = None
     item_id = None
+    resolved_scene_name = scene_name
     source_enabled = False
 
     try:
         client = connect_obs()
-        scene_item = client.get_scene_item_id(scene_name, source_name)
-        item_id = scene_item.scene_item_id
+        resolved_scene_name, item_id = _resolve_scene_item(client, scene_name, source_name)
 
-        client.set_scene_item_enabled(scene_name, item_id, True)
+        if resolved_scene_name is None or item_id is None:
+            available_scenes = ', '.join(_list_scene_names(client)) or 'none'
+            print(
+                f"[Info] OBS trigger skipped for '{source_name}': "
+                f"no matching source was found for preferred scene '{scene_name}'. "
+                f"Available scenes: {available_scenes}"
+            )
+            return
+
+        if resolved_scene_name != scene_name:
+            print(
+                f"[Info] OBS source '{source_name}' was not found in '{scene_name}', "
+                f"using '{resolved_scene_name}' instead."
+            )
+
+        client.set_scene_item_enabled(resolved_scene_name, item_id, True)
         source_enabled = True
-        print(f"[Info] Enabled OBS source '{source_name}' in scene '{scene_name}'")
+        print(f"[Info] Enabled OBS source '{source_name}' in scene '{resolved_scene_name}'")
         time.sleep(visible_seconds)
     except Exception as exc:
         print(f"[Info] OBS trigger failed for '{source_name}': {exc}")
     finally:
-        if client is not None and item_id is not None and source_enabled:
+        if client is not None and item_id is not None and source_enabled and resolved_scene_name:
             try:
-                client.set_scene_item_enabled(scene_name, item_id, False)
+                client.set_scene_item_enabled(resolved_scene_name, item_id, False)
                 print(f"[Info] Disabled OBS source '{source_name}'")
             except Exception as exc:
                 print(f"[Info] Could not disable OBS source '{source_name}': {exc}")

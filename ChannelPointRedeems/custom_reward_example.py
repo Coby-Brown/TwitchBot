@@ -15,12 +15,13 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from connect_obs import connect as connect_obs
+from audio_sink import ensure_audio_sink
 
 
 REWARD_TITLE = "celebration time"
 OBS_SCENE_NAME = "Alerts"
 OBS_SOURCE_NAME = "Channel Point Alert"
-SOUND_FILE = Path(__file__).resolve().parent / "sounds" / "reward-alert.mp3"
+SOUND_FILE = Path("/Path/To/Your/SoundFile.mp3")
 SOURCE_VISIBLE_SECONDS = 3
 
 
@@ -29,6 +30,8 @@ def play_sound_file(sound_file: Path) -> None:
     if not sound_file.exists():
         print(f"[Reward] Sound file not found: {sound_file}")
         return
+
+    ensure_audio_sink()
 
     player_commands = [
         ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(sound_file)],
