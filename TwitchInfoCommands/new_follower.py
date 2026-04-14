@@ -29,6 +29,7 @@ HTTP_TIMEOUT_SECONDS = 10
 FOLLOWER_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ExtraFiles', 'Cache')
 FOLLOWER_CACHE_PATH = os.path.join(FOLLOWER_CACHE_DIR, 'follower_cache.json')
 _STATE_LOCK = threading.Lock()
+_FOLLOWER_AUTH_INVALID = False
 
 
 def _safe_json_load(path: str) -> dict:
@@ -118,6 +119,8 @@ def _save_last_seen_follower(follower: dict) -> str:
 
 
 def _fetch_recent_followers(limit: int = FOLLOWER_FETCH_LIMIT) -> list[dict]:
+    global _FOLLOWER_AUTH_INVALID
+
     bearer, moderator_id = _get_api_auth()
     if not bearer:
         print('[Info] Follower polling skipped: missing Twitch API token.')
@@ -145,11 +148,24 @@ def _fetch_recent_followers(limit: int = FOLLOWER_FETCH_LIMIT) -> list[dict]:
             payload = json.loads(response.read().decode('utf-8'))
     except HTTPError as exc:
         error_body = exc.read().decode('utf-8', errors='ignore')
+        if exc.code == 401:
+            if not _FOLLOWER_AUTH_INVALID:
+                _FOLLOWER_AUTH_INVALID = True
+                print(
+                    '[Info] Follower polling disabled: invalid BROADCASTER_TOKEN. '
+                    'Regenerate the token with moderator:read:followers and restart the bot.'
+                )
+            return []
+
         print(f"[Info] Follower poll HTTP error {exc.code}: {error_body}")
         return []
     except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         print(f"[Info] Follower poll failed: {exc}")
         return []
+
+    if _FOLLOWER_AUTH_INVALID:
+        _FOLLOWER_AUTH_INVALID = False
+        print('[Info] Follower polling recovered after token update.')
 
     rows = payload.get('data', [])
     return rows if isinstance(rows, list) else []

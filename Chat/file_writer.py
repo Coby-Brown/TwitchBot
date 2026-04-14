@@ -41,6 +41,30 @@ def _prune_html_windows(unfiltered_html, filtered_html, unfiltered_html_window, 
     _render_recent_html(unfiltered_html, unfiltered_html_window, now_epoch)
     _render_recent_html(filtered_html, filtered_html_window, now_epoch)
 
+
+def _reconnect_socket(current_sock, reconnect_factory):
+    if reconnect_factory is None:
+        raise ConnectionError('Socket disconnected and no reconnect factory was provided.')
+
+    try:
+        current_sock.close()
+    except OSError:
+        pass
+
+    print('[IRC] Connection dropped; attempting reconnect...')
+    while True:
+        try:
+            new_sock = reconnect_factory()
+            new_sock.settimeout(1.0)
+            print('[IRC] Reconnected successfully.')
+            return new_sock
+        except OSError as exc:
+            message = str(exc).lower()
+            if 'authentication failed' in message or 'improperly formatted auth' in message:
+                raise RuntimeError(str(exc)) from exc
+            print(f"[IRC] Reconnect failed: {exc}. Retrying in 5s...")
+            time.sleep(5)
+
 def _extract_message(line):
     parsed = _parse_privmsg_line(line)
     if not parsed:
@@ -114,7 +138,7 @@ def _write_message(
         _render_recent_html(filtered_html, filtered_html_window, now_epoch)
 
 
-def write_messages(sock, reward_handler=None):
+def write_messages(sock, reward_handler=None, reconnect_factory=None):
     unfiltered_html_window = []
     filtered_html_window = []
     sock.settimeout(1.0)
@@ -130,11 +154,22 @@ def write_messages(sock, reward_handler=None):
             except socket.timeout:
                 _prune_html_windows(unfiltered_html, filtered_html, unfiltered_html_window, filtered_html_window)
                 continue
+            except (ConnectionResetError, OSError):
+                sock = _reconnect_socket(sock, reconnect_factory)
+                continue
+
+            if not response:
+                sock = _reconnect_socket(sock, reconnect_factory)
+                continue
 
             for line in response.splitlines():
                 if line.startswith('PING'):
                     sock.send("PONG :tmi.twitch.tv\r\n".encode('utf-8'))
                     continue
+
+                if ' RECONNECT' in line:
+                    sock = _reconnect_socket(sock, reconnect_factory)
+                    break
 
                 if reward_handler is not None:
                     try:

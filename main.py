@@ -23,7 +23,11 @@ def main():
     start_refresh_thread()
     start_follower_listener()
     start_reward_listener()
-    file_writer.write_messages(sock, reward_handler=handle_incoming_line)
+    file_writer.write_messages(
+        sock,
+        reward_handler=handle_incoming_line,
+        reconnect_factory=connect_twitch,
+    )
 
 
 if __name__ == '__main__':

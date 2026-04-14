@@ -6,7 +6,7 @@ from connect_obs import connect
 
 
 DEFAULT_SOURCE_NAME = 'Chat'
-DEFAULT_INTERVAL = 0.5
+DEFAULT_INTERVAL = 1
 DEFAULT_PROPERTY = 'refreshnocache'
 
 
